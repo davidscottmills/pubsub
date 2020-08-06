@@ -27,6 +27,7 @@ func main() {
     s := ps.Subscribe("subject.name", func(m *pubsub.Msg) {
         fmt.Println(m.Data)
     })
+    defer s.Unsubscribe()
 
     // Publish
     ps.Publish("subject.name", "Hello, world!")
@@ -34,9 +35,10 @@ func main() {
     runAndBlock()
 }
 ```
-
+## Tenets
+- No race conditions
+- Good performance
 
 ## TODO
- - Stop Subscription Listener go routine on unsubscribe
- - Implement and test close or drain on PubSub
- - Implement and test errors
+- Implement and test close or drain on PubSub
+- Implement and test errors
