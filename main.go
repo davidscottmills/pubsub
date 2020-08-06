@@ -1,4 +1,4 @@
-package main
+package pubsub
 
 import (
 	"sync"
@@ -26,10 +26,6 @@ type Msg struct {
 }
 
 type MsgHandler func(m *Msg)
-
-func main() {
-
-}
 
 func NewPubSub() *PubSub {
 	subs := make(map[int]*Subscription)
