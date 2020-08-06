@@ -21,8 +21,8 @@ type Subscription struct {
 }
 
 type Msg struct {
-	subject string
-	data    interface{}
+	Subject string
+	Data    interface{}
 }
 
 type MsgHandler func(m *Msg)
@@ -62,7 +62,7 @@ func (ps *PubSub) psListen() {
 	for {
 		msg := <-ps.mc
 		for _, v := range ps.subscriptions {
-			if v.subject == msg.subject {
+			if v.subject == msg.Subject {
 				v.mch <- msg
 			}
 		}
@@ -80,7 +80,7 @@ func (ps *PubSub) subListen(sub *Subscription) {
 }
 
 func newMessage(subject string, data interface{}) *Msg {
-	return &Msg{subject: subject, data: data}
+	return &Msg{Subject: subject, Data: data}
 }
 
 func newSubscription(sid int, subject string, ps *PubSub, mh MsgHandler) *Subscription {

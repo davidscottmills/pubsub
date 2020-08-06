@@ -1,4 +1,4 @@
-module pubsub
+module github.com/davidscottmills/pubsub
 
 go 1.14
 

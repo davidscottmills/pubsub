@@ -41,6 +41,7 @@ func Test_PubSub_Listen(t *testing.T) {
 	ps.Subscribe("not.test", mh3)
 	ps.Publish(subject, "Hello, world!")
 
+	// TODO: Use channels in handlers to report back that they've recieved a message.
 	time.Sleep(2 * time.Second)
 
 	require.True(t, mh1called)
@@ -60,6 +61,7 @@ func Test_PubSub_Listen_Unsubscribe(t *testing.T) {
 	s2.Unsubscribe()
 	ps.Publish(subject, "Hello, world!")
 
+	// TODO: Use channels in handlers to report back that they've recieved a message.
 	time.Sleep(2 * time.Second)
 
 	require.True(t, mh1called)
