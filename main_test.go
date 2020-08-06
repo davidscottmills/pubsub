@@ -29,17 +29,9 @@ func Test_PubSub_Subscribe_Unsubscribe(t *testing.T) {
 
 func Test_PubSub_Listen(t *testing.T) {
 	mh1called, mh2called, mh3called := false, false, false
-	mh1 := func(m *Msg) {
-		mh1called = true
-	}
-
-	mh2 := func(m *Msg) {
-		mh2called = true
-	}
-
-	mh3 := func(m *Msg) {
-		mh3called = true
-	}
+	mh1 := func(m *Msg) { mh1called = true }
+	mh2 := func(m *Msg) { mh2called = true }
+	mh3 := func(m *Msg) { mh3called = true }
 
 	subject := "test.test"
 	ps := NewPubSub()
@@ -54,4 +46,22 @@ func Test_PubSub_Listen(t *testing.T) {
 	require.True(t, mh1called)
 	require.True(t, mh2called)
 	require.False(t, mh3called)
+}
+
+func Test_PubSub_Listen_Unsubscribe(t *testing.T) {
+	mh1called, mh2called := false, false
+	mh1 := func(m *Msg) { mh1called = true }
+	mh2 := func(m *Msg) { mh2called = false }
+
+	subject := "test.test"
+	ps := NewPubSub()
+	ps.Subscribe(subject, mh1)
+	s2 := ps.Subscribe(subject, mh2)
+	s2.Unsubscribe()
+	ps.Publish(subject, "Hello, world!")
+
+	time.Sleep(2 * time.Second)
+
+	require.True(t, mh1called)
+	require.False(t, mh2called)
 }
