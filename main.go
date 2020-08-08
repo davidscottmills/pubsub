@@ -30,7 +30,7 @@ type Msg struct {
 type MsgHandler func(m *Msg)
 
 var (
-	SubscriptionBoundingSettingsError = errors.New("The input for number of concurrent go routines must be an int that is greater than 0")
+	ErrSubscriptionBoundingSettingsError = errors.New("pubsub: the input for number of concurrent go routines must be an int that is greater than 0")
 )
 
 func NewPubSub() *PubSub {
@@ -48,7 +48,7 @@ func (ps *PubSub) Subscribe(subject string, mh MsgHandler, args ...interface{}) 
 	if len(args) > 0 {
 		n, ok := args[0].(int)
 		if !ok || n <= 0 {
-			return nil, SubscriptionBoundingSettingsError
+			return nil, ErrSubscriptionBoundingSettingsError
 		}
 		ncgr = n
 	}

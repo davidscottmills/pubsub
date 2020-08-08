@@ -15,7 +15,7 @@ func Test_PubSub_Subscribe_Invalid_Num_Concurrent_Go_Routines_Returns_Error(t *t
 	ncgrs := []int{0, -1}
 	for _, ncgr := range ncgrs {
 		_, err := ps.Subscribe("test.test", mh, ncgr)
-		require.Equal(t, SubscriptionBoundingSettingsError, err)
+		require.Equal(t, ErrSubscriptionBoundingSettingsError, err)
 	}
 }
 func Test_PubSub_Subscribe_Unsubscribe(t *testing.T) {
