@@ -1,6 +1,7 @@
 # PubSub
 
-PubSub is a Go Package for in-memory publish/subscribe
+PubSub is a Go Package for in-memory publish/subscribe.
+This package is currently in prerelease.
 
 ## Installation
 
@@ -23,21 +24,32 @@ var ps *PubSub
 func main() {
     ps := NewPubSub()
 
-    // Subscribe to a subject
-    s := ps.Subscribe("subject.name", func(m *pubsub.Msg) {
+    handerFunc := func(m *pubsub.Msg) {
         fmt.Println(m.Data)
-    })
+    }
+
+    // Unbounded number of go routines
+    // Subscribe to a subject
+    s, err := ps.Subscribe("subject.name", handerFunc)
+    defer s.Unsubscribe()
+
+    // Bound the number of concurrent handler functions by passing number
+    // of concurrent go routines that you want to allow.
+    // Subscribe to a subject
+    s, err := ps.Subscribe("subject.name", handerFunc, 10)
     defer s.Unsubscribe()
 
     // Publish
     ps.Publish("subject.name", "Hello, world!")
 
+    someStruct := struct{}{}
+
+    // Publish any type you'd like
+    ps.Publish("subject.name", someStruct)
+
     runAndBlock()
 }
 ```
-## Tenets
-- No race conditions
-- Good performance
 
 ## TODO
 - Implement and test close or drain on PubSub

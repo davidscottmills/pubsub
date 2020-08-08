@@ -1,6 +1,7 @@
 package pubsub
 
 import (
+	"errors"
 	"sync"
 )
 
@@ -18,6 +19,7 @@ type Subscription struct {
 	mh      MsgHandler
 	mch     chan *Msg //message channel
 	uch     chan bool //unsubscribe channel
+	sem     *chan int //semaphore to control number of concurrent go routines
 }
 
 type Msg struct {
@@ -27,20 +29,37 @@ type Msg struct {
 
 type MsgHandler func(m *Msg)
 
+var (
+	SubscriptionBoundingSettingsError = errors.New("The input for number of concurrent go routines must be an int that is greater than 0")
+)
+
 func NewPubSub() *PubSub {
 	subs := make(map[int]*Subscription)
 	ps := PubSub{mu: &sync.RWMutex{}, subscriptions: subs, ssid: 0}
 	return &ps
 }
 
-func (ps *PubSub) Subscribe(subject string, mh MsgHandler) *Subscription {
+// Subscribe to a subject
+// subject - The subject you want to subscribe to
+// mh - The message handler
+// args - number of allowed concurrent go routines. Default is not to throttle.
+func (ps *PubSub) Subscribe(subject string, mh MsgHandler, args ...interface{}) (*Subscription, error) {
+	ncgr := 0
+	if len(args) > 0 {
+		n, ok := args[0].(int)
+		if !ok || n <= 0 {
+			return nil, SubscriptionBoundingSettingsError
+		}
+		ncgr = n
+	}
+
 	ps.mu.Lock()
-	s := newSubscription(ps.ssid, subject, ps, mh)
+	s := newSubscription(ps.ssid, ncgr, subject, ps, mh)
 	ps.subscriptions[ps.ssid] = s
 	ps.ssid++
 	go ps.subListen(s)
 	ps.mu.Unlock()
-	return s
+	return s, nil
 }
 
 func (s *Subscription) Unsubscribe() {
@@ -66,7 +85,7 @@ L:
 	for {
 		select {
 		case msg := <-s.mch:
-			go s.mh(msg)
+			s.mh(msg)
 		case <-s.uch:
 			break L
 		}
@@ -77,6 +96,32 @@ func newMessage(subject string, data interface{}) *Msg {
 	return &Msg{Subject: subject, Data: data}
 }
 
-func newSubscription(sid int, subject string, ps *PubSub, mh MsgHandler) *Subscription {
-	return &Subscription{mu: &sync.Mutex{}, sid: sid, subject: subject, ps: ps, mh: mh, mch: make(chan *Msg), uch: make(chan bool)}
+func newSubscription(sid, ncgr int, subject string, ps *PubSub, mh MsgHandler) *Subscription {
+	nmh, sem := newMessageHandlerWrapper(ncgr, mh)
+
+	return &Subscription{mu: &sync.Mutex{}, sid: sid, subject: subject, ps: ps, mh: nmh, mch: make(chan *Msg), uch: make(chan bool), sem: sem}
+}
+
+func newMessageHandlerWrapper(ncgr int, mh MsgHandler) (MsgHandler, *chan int) {
+	var sem chan int
+
+	// Unbounded concurrency
+	nmh := func(m *Msg) {
+		go mh(m)
+	}
+
+	if ncgr > 0 {
+		sem = make(chan int, ncgr)
+
+		// Bounded concurrency
+		nmh = func(m *Msg) {
+			sem <- 1
+			go func() {
+				mh(m)
+				<-sem
+			}()
+		}
+	}
+
+	return nmh, &sem
 }

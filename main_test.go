@@ -8,15 +8,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_PubSub_Subscribe_Invalid_Num_Concurrent_Go_Routines_Returns_Error(t *testing.T) {
+	mh := func(m *Msg) {}
+	ps := NewPubSub()
+
+	ncgrs := []int{0, -1}
+	for _, ncgr := range ncgrs {
+		_, err := ps.Subscribe("test.test", mh, ncgr)
+		require.Equal(t, SubscriptionBoundingSettingsError, err)
+	}
+}
 func Test_PubSub_Subscribe_Unsubscribe(t *testing.T) {
 	mh := func(m *Msg) {}
 	ps := NewPubSub()
 
-	s1 := ps.Subscribe("test.test", mh)
+	s1, _ := ps.Subscribe("test.test", mh)
 	require.Same(t, ps, s1.ps)
 	require.Equal(t, 1, len(ps.subscriptions))
 
-	s2 := ps.Subscribe("test.test", mh)
+	s2, _ := ps.Subscribe("test.test", mh)
 	require.Same(t, ps, s2.ps)
 	require.Equal(t, 2, len(ps.subscriptions))
 	require.NotEqual(t, s1.sid, s2.sid)
@@ -42,11 +52,11 @@ func Test_PubSub_Listen(t *testing.T) {
 	subject := "test.test"
 	ps := NewPubSub()
 
-	s1 := ps.Subscribe(subject, mh1)
+	s1, _ := ps.Subscribe(subject, mh1)
 	defer s1.Unsubscribe()
-	s2 := ps.Subscribe(subject, mh2)
+	s2, _ := ps.Subscribe(subject, mh2)
 	defer s2.Unsubscribe()
-	s3 := ps.Subscribe("not.test", mh3)
+	s3, _ := ps.Subscribe("not.test", mh3)
 	defer s3.Unsubscribe()
 	ps.Publish(subject, "Hello, world!")
 
@@ -72,9 +82,9 @@ func Test_PubSub_Listen_Unsubscribe_Publish(t *testing.T) {
 
 	subject := "test.test"
 	ps := NewPubSub()
-	s1 := ps.Subscribe(subject, mh1)
+	s1, _ := ps.Subscribe(subject, mh1)
 	defer s1.Unsubscribe()
-	s2 := ps.Subscribe(subject, mh2)
+	s2, _ := ps.Subscribe(subject, mh2)
 	s2.Unsubscribe()
 	ps.Publish(subject, "Hello, world!")
 
@@ -90,9 +100,9 @@ func Test_PubSub_Listen_Publish_Unsubscribe(t *testing.T) {
 
 	subject := "test.test"
 	ps := NewPubSub()
-	s1 := ps.Subscribe(subject, mh1)
+	s1, _ := ps.Subscribe(subject, mh1)
 	defer s1.Unsubscribe()
-	s2 := ps.Subscribe(subject, mh2)
+	s2, _ := ps.Subscribe(subject, mh2)
 	// If we publish before unsubscribe is called,
 	// we should expect that the subscriber will recieve the message.
 	ps.Publish(subject, "Hello, world!")
@@ -115,7 +125,7 @@ func Test_PubSub_Multiple_Messages(t *testing.T) {
 
 	subject := "test.test"
 	ps := NewPubSub()
-	s1 := ps.Subscribe(subject, mh1)
+	s1, _ := ps.Subscribe(subject, mh1)
 	defer s1.Unsubscribe()
 	for i := 0; i < 100; i++ {
 		ps.Publish(subject, "Hello, world!")
@@ -123,6 +133,31 @@ func Test_PubSub_Multiple_Messages(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		<-mhch1
+	}
+}
+
+func Test_Bounded_Handler_Setting(t *testing.T) {
+	mhch1 := make(chan bool)
+	mh1 := func(m *Msg) {
+		mhch1 <- true
+		time.Sleep(2 * time.Second)
+	}
+
+	subject := "test.test"
+	ncgr := 10
+	ps := NewPubSub()
+	s, _ := ps.Subscribe(subject, mh1, 10)
+	defer s.Unsubscribe()
+	for i := 0; i < 11; i++ {
+		ps.Publish(subject, "Hello, world!")
+	}
+
+	for i := 0; i < 11; i++ {
+		if i == 11 {
+			require.Equal(t, ncgr, len(*s.sem))
+		}
+		<-mhch1
+
 	}
 }
 
@@ -135,7 +170,7 @@ func Benchmark_HelloWorld_TenSubscriptions_OneMessagesPerSubscription(b *testing
 	for i := 0; i < 10; i++ {
 		sub := "sub." + strconv.Itoa(i)
 		mh := func(m *Msg) { mch <- true }
-		s := ps.Subscribe(sub, mh)
+		s, _ := ps.Subscribe(sub, mh)
 		defer s.Unsubscribe()
 		subs = append(subs, sub)
 	}
@@ -167,7 +202,7 @@ func Benchmark_HelloWorld_TenByTenSubscriptions_OneMessagesPerSubscription(b *te
 		subs = append(subs, sub)
 		for j := 0; j < subsPerSub; j++ {
 			mh := func(m *Msg) { mch <- true }
-			s := ps.Subscribe(sub, mh)
+			s, _ := ps.Subscribe(sub, mh)
 			defer s.Unsubscribe()
 		}
 	}
@@ -215,7 +250,7 @@ func Benchmark_Fibonacci_TenByTenSubscriptions_OneMessagesPerSubscription(b *tes
 				Fib(mi)
 				mch <- true
 			}
-			s := ps.Subscribe(sub, mh)
+			s, _ := ps.Subscribe(sub, mh)
 			defer s.Unsubscribe()
 		}
 	}
