@@ -1,5 +1,6 @@
-on: push
-  branches:
+on:
+  push:
+    branches:
     - master
 name: Test
 jobs:
