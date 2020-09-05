@@ -1,13 +1,15 @@
-on:
+name: Test
+on: 
   push:
     branches:
-      -master
+      - master
 
 jobs:
   build:
     runs-on: unbuntu-latest
     steps:
     - uses: actions/checkout@v2
+
     - name: Setup Go
       uses: actions/setup-go@v2
       with:
