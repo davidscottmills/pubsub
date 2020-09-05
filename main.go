@@ -70,14 +70,14 @@ func (s *Subscription) Unsubscribe() {
 }
 
 func (ps *PubSub) Publish(subject string, data interface{}) {
-	ps.mu.Lock()
+	ps.mu.RLock()
 	msg := newMessage(subject, data)
 	for _, s := range ps.subscriptions {
 		if s.subject == msg.Subject {
 			s.mch <- msg
 		}
 	}
-	ps.mu.Unlock()
+	ps.mu.RUnlock()
 }
 
 func (ps *PubSub) subListen(s *Subscription) {
