@@ -1,4 +1,5 @@
 # PubSub
+![test and build](https://github.com/davidscottmills/pubsub/workflows/test%20and%20build/badge.svg)
 
 PubSub is a Go Package for in-memory publish/subscribe.
 This package is currently in prerelease.
