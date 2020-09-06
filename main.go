@@ -36,21 +36,21 @@ type Msg struct {
 type MsgHandler func(m *Msg)
 
 var (
-	// An error given when bounding settings have been pass incorrectly.
+	// ErrSubscriptionBoundingSettingsError is an error given when bounding settings have been pass incorrectly.
 	ErrSubscriptionBoundingSettingsError = errors.New("pubsub: the input for number of concurrent go routines must be an int that is greater than 0")
 )
 
-// Instantiate a new PubSub client.
+// NewPubSub instantiates a new PubSub client.
 func NewPubSub() *PubSub {
 	subs := make(map[int]*Subscription)
 	ps := PubSub{mu: &sync.RWMutex{}, subscriptions: subs, ssid: 0}
 	return &ps
 }
 
-// Subscribe to a subject
-// subject - The subject you want to subscribe to
-// mh - The message handler
-// args - number of allowed concurrent go routines. Default is not to throttle.
+// Subscribe subscribes to a subject.
+// subject - The subject you want to subscribe to.
+// mh - The message handler.
+// args - Number of allowed concurrent go routines. Default is not to throttle.
 func (ps *PubSub) Subscribe(subject string, mh MsgHandler, args ...interface{}) (*Subscription, error) {
 	ncgr := 0
 	if len(args) > 0 {
@@ -70,7 +70,7 @@ func (ps *PubSub) Subscribe(subject string, mh MsgHandler, args ...interface{}) 
 	return s, nil
 }
 
-// Unsubscribe from a subject.
+// Unsubscribe unsubscribes from a subject.
 func (s *Subscription) Unsubscribe() {
 	s.ps.mu.Lock()
 	s.uch <- true
@@ -78,7 +78,7 @@ func (s *Subscription) Unsubscribe() {
 	s.ps.mu.Unlock()
 }
 
-// Publish data to a subject.
+// Publish publishes data to a subject.
 // subject - the subject you want to pass the data to
 // data - the data you want to pass
 func (ps *PubSub) Publish(subject string, data interface{}) {
