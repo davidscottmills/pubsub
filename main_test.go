@@ -104,7 +104,7 @@ func Test_PubSub_Listen_Publish_Unsubscribe(t *testing.T) {
 	defer s1.Unsubscribe()
 	s2, _ := ps.Subscribe(subject, mh2)
 	// If we publish before unsubscribe is called,
-	// we should expect that the subscriber will recieve the message.
+	// we should expect that the subscriber will receive the message.
 	ps.Publish(subject, "Hello, world!")
 	go s2.Unsubscribe()
 
