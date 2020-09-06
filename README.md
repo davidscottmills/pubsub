@@ -1,5 +1,6 @@
 # PubSub
 PubSub is a Go Package for in-memory publish/subscribe.
+
 [![test and build](https://github.com/davidscottmills/pubsub/workflows/test%20and%20build/badge.svg)](https://github.com/davidscottmills/pubsub/actions?query=workflow%3A%22test+and+build%22)
 [![Coverage Status](https://coveralls.io/repos/github/davidscottmills/pubsub/badge.svg)](https://coveralls.io/github/davidscottmills/pubsub)
 [![Go Report Card](https://goreportcard.com/badge/github.com/davidscottmills/pubsub)](https://goreportcard.com/report/github.com/davidscottmills/pubsub)
