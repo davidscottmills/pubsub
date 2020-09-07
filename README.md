@@ -7,6 +7,7 @@ PubSub is a Go Package for in-memory publish/subscribe.
 [![Documentation](https://godoc.org/github.com/davidscottmills/pubsub?status.svg)](http://godoc.org/github.com/davidscottmills/pubsub)
 [![GitHub issues](https://img.shields.io/github/issues/davidscottmills/pubsub.svg)](https://github.com/davidscottmills/pubsub/issues)
 [![license](https://img.shields.io/github/license/davidscottmills/pubsub.svg?maxAge=2592000)](https://github.com/davidscottmills/pubsub/LICENSE.md)
+[![GitHub go.mod Go version of a Go module](https://img.shields.io/github/go-mod/go-version/davidscottmills/pubsub.svg)](https://github.com/davidscottmills/pubsub)
 
 ## Installation
 
