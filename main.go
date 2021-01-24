@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"unicode"
 )
 
 // A PubSub represents the client that mangages subscribing, publishing and routing of messages to subject handlers.
@@ -36,8 +37,8 @@ type Msg struct {
 type MsgHandler func(m *Msg)
 
 var (
-	// ErrSubscriptionBoundingSettingsError is an error given when bounding settings have been pass incorrectly.
-	ErrSubscriptionBoundingSettingsError = errors.New("pubsub: the input for number of concurrent go routines must be an int that is greater than 0")
+	//ErrInvalidSubject is returned when a subject name is invalid
+	ErrInvalidSubject = errors.New("Subject name was invalid")
 )
 
 // NewPubSub instantiates a new PubSub client.
@@ -51,7 +52,12 @@ func NewPubSub() *PubSub {
 // subject - The subject you want to subscribe to.
 // mh - The message handler.
 // args - Number of allowed concurrent go routines. Default is not to throttle.
+// Returns ErrInvalidSubject if the subject is invalid
 func (ps *PubSub) Subscribe(subject string, mh MsgHandler) (*Subscription, error) {
+	err := validateSubject(subject)
+	if err != nil {
+		return nil, err
+	}
 	ps.mu.Lock()
 	s := newSubscription(ps.ssid, subject, ps, mh)
 	ps.subscriptions[ps.ssid] = s
@@ -72,16 +78,21 @@ func (s *Subscription) Unsubscribe() {
 // Publish publishes data to a subject.
 // subject - the subject you want to pass the data to
 // data - the data you want to pass
-func (ps *PubSub) Publish(subject string, data interface{}) {
+// Returns ErrInvalidSubject if the subject is invalid
+func (ps *PubSub) Publish(subject string, data interface{}) error {
+	err := validateSubject(subject)
+	if err != nil {
+		return err
+	}
 	msg := newMessage(subject, data)
 	ps.mu.RLock()
 	for _, s := range ps.subscriptions {
-		// TODO: add matching function here
 		if subjectMatches(s.subject, msg.subject) {
 			s.mch <- msg
 		}
 	}
 	ps.mu.RUnlock()
+	return nil
 }
 
 func (ps *PubSub) subListen(s *Subscription) {
@@ -122,18 +133,18 @@ func subjectMatches(subscribeSubject, msgSubject string) bool {
 	subjectTokens := strings.Split(subscribeSubject, ".")
 	msgSubjectTokens := strings.Split(msgSubject, ".")
 
-	subLen := len(subjectTokens)
+	subTokensLen := len(subjectTokens)
 
-	if subLen > len(msgSubjectTokens) {
+	if subTokensLen > len(msgSubjectTokens) {
 		return false
 	}
 
 	for i, token := range msgSubjectTokens {
-		if (i+1 == subLen || i+1 > subLen) && subjectTokens[subLen-1] == ">" {
+		if (i+1 == subTokensLen || i+1 > subTokensLen) && subjectTokens[subTokensLen-1] == ">" {
 			return true
 		}
 
-		if i+1 > subLen {
+		if i+1 > subTokensLen {
 			return false
 		}
 		subjectToken := subjectTokens[i]
@@ -154,3 +165,38 @@ func subjectMatches(subscribeSubject, msgSubject string) bool {
 // * allowed anywhere, by itself
 // > only allowed at end, by itself
 // alpha-numeric chars only
+
+func validateSubject(subject string) error {
+	if subject == "" {
+		return ErrInvalidSubject
+	}
+	tokens := strings.Split(subject, ".")
+	lenTokens := len(tokens)
+	for i, token := range tokens {
+		if token == ">" && i+1 != lenTokens {
+			return ErrInvalidSubject
+		}
+
+		if token == "*" || token == ">" {
+			continue
+		}
+
+		if !isASCII(token) {
+			return ErrInvalidSubject
+		}
+
+		if strings.Contains(token, "*") || strings.Contains(token, ">") || strings.Contains(token, " ") {
+			return ErrInvalidSubject
+		}
+	}
+	return nil
+}
+
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] > unicode.MaxASCII {
+			return false
+		}
+	}
+	return true
+}

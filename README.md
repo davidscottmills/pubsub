@@ -35,13 +35,12 @@ func main() {
         fmt.Println(m.Data)
     }
 
-    // Unbounded number of go routines
     // Subscribe to a subject
     s, err := ps.Subscribe("subject.name", handerFunc)
     defer s.Unsubscribe()
 
     // Publish
-    ps.Publish("subject.name", "Hello, world!")
+    err := ps.Publish("subject.name", "Hello, world!")
 
     someStruct := struct{}{}
 

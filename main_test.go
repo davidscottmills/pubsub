@@ -8,6 +8,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_PubSub_Subscribe_Invalid_Subject(t *testing.T) {
+	mh := func(m *Msg) {}
+	ps := NewPubSub()
+	_, err := ps.Subscribe("test.>.test", mh)
+	require.Equal(t, ErrInvalidSubject, err)
+}
+
+func Test_PubSub_Publish_Invalid_Subject(t *testing.T) {
+	ps := NewPubSub()
+	err := ps.Publish("test.>.test", "some message")
+	require.Equal(t, ErrInvalidSubject, err)
+}
+
 func Test_PubSub_Subscribe_Unsubscribe(t *testing.T) {
 	mh := func(m *Msg) {}
 	ps := NewPubSub()
@@ -241,6 +254,109 @@ func Test_subjectMatches_Wildcard_Routing(t *testing.T) {
 		result := subjectMatches(td.subscribeSubject, td.msgSubject)
 		if result != td.expected {
 			t.Logf("TestCaseID: %d, Expected %t, got %t", td.testCaseID, td.expected, result)
+			t.Fail()
+		}
+	}
+}
+
+func Test_validateSubject(t *testing.T) {
+	testData := []struct {
+		testCaseID int
+		subject    string
+		expectErr  bool
+	}{
+		{
+			testCaseID: 1,
+			subject:    ">",
+			expectErr:  false,
+		},
+		{
+			testCaseID: 2,
+			subject:    "*",
+			expectErr:  false,
+		},
+		{
+			testCaseID: 3,
+			subject:    "*.*",
+			expectErr:  false,
+		},
+		{
+			testCaseID: 4,
+			subject:    "foo.>",
+			expectErr:  false,
+		},
+		{
+			testCaseID: 5,
+			subject:    "foo.bar.*",
+			expectErr:  false,
+		},
+		{
+			testCaseID: 6,
+			subject:    "foo.*.bar",
+			expectErr:  false,
+		},
+		{
+			testCaseID: 7,
+			subject:    "*.bar.bar",
+			expectErr:  false,
+		},
+		{
+			testCaseID: 8,
+			subject:    "foo.*.>",
+			expectErr:  false,
+		},
+		{
+			testCaseID: 9,
+			subject:    "foo",
+			expectErr:  false,
+		},
+		{
+			testCaseID: 10,
+			subject:    "foo.bar",
+			expectErr:  false,
+		},
+		{
+			testCaseID: 12,
+			subject:    "fo*o",
+			expectErr:  true,
+		},
+		{
+			testCaseID: 13,
+			subject:    "fo>o",
+			expectErr:  true,
+		},
+		{
+			testCaseID: 14,
+			subject:    "fo o",
+			expectErr:  true,
+		},
+		{
+			testCaseID: 15,
+			subject:    "",
+			expectErr:  true,
+		},
+		{
+			testCaseID: 16,
+			subject:    "foo.bar.>.foo",
+			expectErr:  true,
+		},
+		{
+			testCaseID: 17,
+			subject:    "भारत.bar..foo",
+			expectErr:  true,
+		},
+	}
+
+	for _, td := range testData {
+		err := validateSubject(td.subject)
+
+		if td.expectErr && err == nil {
+			t.Logf("TestCaseID: %d, Expected error but did not get one", td.testCaseID)
+			t.Fail()
+		}
+
+		if !td.expectErr && err != nil {
+			t.Logf("TestCaseID: %d, Did not expect error, but got one.", td.testCaseID)
 			t.Fail()
 		}
 	}
