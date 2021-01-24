@@ -1,4 +1,5 @@
 # PubSub
+
 PubSub is a Go Package for in-memory publish/subscribe.
 
 [![test and build](https://github.com/davidscottmills/pubsub/workflows/test%20and%20build/badge.svg)](https://github.com/davidscottmills/pubsub/actions?query=workflow%3A%22test+and+build%22)
@@ -34,19 +35,12 @@ func main() {
         fmt.Println(m.Data)
     }
 
-    // Unbounded number of go routines
     // Subscribe to a subject
     s, err := ps.Subscribe("subject.name", handerFunc)
     defer s.Unsubscribe()
 
-    // Bound the number of concurrent handler functions by passing number
-    // of concurrent go routines that you want to allow.
-    // Subscribe to a subject
-    s, err := ps.Subscribe("subject.name", handerFunc, 10)
-    defer s.Unsubscribe()
-
     // Publish
-    ps.Publish("subject.name", "Hello, world!")
+    err := ps.Publish("subject.name", "Hello, world!")
 
     someStruct := struct{}{}
 
@@ -57,6 +51,21 @@ func main() {
 }
 ```
 
+## Subject Routing
+
+Subject naming matches that of NATS.
+
+### Subject Names
+
+- All ascii alphanumeric characters except spaces/tabs and separators which are "." and ">" are allowed. Subject names can be optionally token-delimited using the dot character (.)
+- Subjects are case sensative
+
+### Subject Wildcards
+- The asterisk character (*) matches a single token at any level of the subject.
+- The greater than symbol (>), also known as the full wildcard, matches one or more tokens at the tail of a subject, and must be the last token. The wildcarded subject foo.> will match foo.bar or foo.bar.baz.1, but not foo. 
+- Wildcards must be a separate token (foo.*.baz or foo.> are syntactically valid; foo*.bar, f*o.b*r and foo> are not)
+
 ## TODO
+
 - Implement and test close or drain on PubSub
 - Implement and test errors
