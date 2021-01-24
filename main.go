@@ -22,7 +22,6 @@ type Subscription struct {
 	mh      MsgHandler
 	mch     chan *Msg //message channel
 	uch     chan bool //unsubscribe channel
-	sem     *chan int //semaphore to control number of concurrent go routines
 }
 
 // A Msg is a message that is to be handled by subscribers when data is published to a subject.
@@ -51,18 +50,9 @@ func NewPubSub() *PubSub {
 // subject - The subject you want to subscribe to.
 // mh - The message handler.
 // args - Number of allowed concurrent go routines. Default is not to throttle.
-func (ps *PubSub) Subscribe(subject string, mh MsgHandler, args ...interface{}) (*Subscription, error) {
-	ncgr := 0
-	if len(args) > 0 {
-		n, ok := args[0].(int)
-		if !ok || n <= 0 {
-			return nil, ErrSubscriptionBoundingSettingsError
-		}
-		ncgr = n
-	}
-
+func (ps *PubSub) Subscribe(subject string, mh MsgHandler) (*Subscription, error) {
 	ps.mu.Lock()
-	s := newSubscription(ps.ssid, ncgr, subject, ps, mh)
+	s := newSubscription(ps.ssid, subject, ps, mh)
 	ps.subscriptions[ps.ssid] = s
 	ps.ssid++
 	go ps.subListen(s)
@@ -108,32 +98,16 @@ func newMessage(subject string, data interface{}) *Msg {
 	return &Msg{subject: subject, Data: data}
 }
 
-func newSubscription(sid, ncgr int, subject string, ps *PubSub, mh MsgHandler) *Subscription {
-	nmh, sem := newMessageHandlerWrapper(ncgr, mh)
+func newSubscription(sid int, subject string, ps *PubSub, mh MsgHandler) *Subscription {
+	nmh := newMessageHandlerWrapper(mh)
 
-	return &Subscription{mu: &sync.Mutex{}, sid: sid, subject: subject, ps: ps, mh: nmh, mch: make(chan *Msg), uch: make(chan bool), sem: sem}
+	return &Subscription{mu: &sync.Mutex{}, sid: sid, subject: subject, ps: ps, mh: nmh, mch: make(chan *Msg), uch: make(chan bool)}
 }
 
-func newMessageHandlerWrapper(ncgr int, mh MsgHandler) (MsgHandler, *chan int) {
-	var sem chan int
-
-	// Unbounded concurrency
+func newMessageHandlerWrapper(mh MsgHandler) MsgHandler {
 	nmh := func(m *Msg) {
 		go mh(m)
 	}
 
-	if ncgr > 0 {
-		sem = make(chan int, ncgr)
-
-		// Bounded concurrency
-		nmh = func(m *Msg) {
-			sem <- 1
-			go func() {
-				mh(m)
-				<-sem
-			}()
-		}
-	}
-
-	return nmh, &sem
+	return nmh
 }
