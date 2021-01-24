@@ -161,11 +161,6 @@ func subjectMatches(subscribeSubject, msgSubject string) bool {
 	return true
 }
 
-// TODO: Subject Validator
-// * allowed anywhere, by itself
-// > only allowed at end, by itself
-// alpha-numeric chars only
-
 func validateSubject(subject string) error {
 	if subject == "" {
 		return ErrInvalidSubject
