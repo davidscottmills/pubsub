@@ -8,16 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_PubSub_Subscribe_Invalid_Num_Concurrent_Go_Routines_Returns_Error(t *testing.T) {
-	mh := func(m *Msg) {}
-	ps := NewPubSub()
-
-	ncgrs := []int{0, -1}
-	for _, ncgr := range ncgrs {
-		_, err := ps.Subscribe("test.test", mh, ncgr)
-		require.Equal(t, ErrSubscriptionBoundingSettingsError, err)
-	}
-}
 func Test_PubSub_Subscribe_Unsubscribe(t *testing.T) {
 	mh := func(m *Msg) {}
 	ps := NewPubSub()
@@ -133,31 +123,6 @@ func Test_PubSub_Multiple_Messages(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		<-mhch1
-	}
-}
-
-func Test_Bounded_Handler_Setting(t *testing.T) {
-	mhch1 := make(chan bool)
-	mh1 := func(m *Msg) {
-		mhch1 <- true
-		time.Sleep(2 * time.Second)
-	}
-
-	subject := "test.test"
-	ncgr := 10
-	ps := NewPubSub()
-	s, _ := ps.Subscribe(subject, mh1, 10)
-	defer s.Unsubscribe()
-	for i := 0; i < 11; i++ {
-		ps.Publish(subject, "Hello, world!")
-	}
-
-	for i := 0; i < 11; i++ {
-		if i == 11 {
-			require.Equal(t, ncgr, len(*s.sem))
-		}
-		<-mhch1
-
 	}
 }
 
