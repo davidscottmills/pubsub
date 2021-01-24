@@ -126,6 +126,126 @@ func Test_PubSub_Multiple_Messages(t *testing.T) {
 	}
 }
 
+func Test_subjectMatches_Wildcard_Routing(t *testing.T) {
+	testData := []struct {
+		testCaseID       int
+		subscribeSubject string
+		msgSubject       string
+		expected         bool
+	}{
+		{
+			testCaseID:       1,
+			subscribeSubject: "foo.bar",
+			msgSubject:       "foo.bar",
+			expected:         true,
+		},
+		{
+			testCaseID:       2,
+			subscribeSubject: ">",
+			msgSubject:       "foo.bar",
+			expected:         true,
+		},
+		{
+			testCaseID:       3,
+			subscribeSubject: "foo.>",
+			msgSubject:       "foo.bar",
+			expected:         true,
+		},
+		{
+			testCaseID:       4,
+			subscribeSubject: "foo.>",
+			msgSubject:       "foo.bar.1234",
+			expected:         true,
+		},
+		{
+			testCaseID:       5,
+			subscribeSubject: "foo.bar.*",
+			msgSubject:       "foo.bar.1234",
+			expected:         true,
+		},
+		{
+			testCaseID:       6,
+			subscribeSubject: "foo.*.bar",
+			msgSubject:       "foo.bar.bar",
+			expected:         true,
+		},
+		{
+			testCaseID:       7,
+			subscribeSubject: "*.bar.bar",
+			msgSubject:       "foo.bar.bar",
+			expected:         true,
+		},
+		{
+			testCaseID:       8,
+			subscribeSubject: "foo.*.>",
+			msgSubject:       "foo.bar.baz.1234",
+			expected:         true,
+		},
+		{
+			testCaseID:       9,
+			subscribeSubject: "foo",
+			msgSubject:       "bar",
+			expected:         false,
+		},
+		{
+			testCaseID:       10,
+			subscribeSubject: "foo.*",
+			msgSubject:       "food.bar.baz",
+			expected:         false,
+		},
+		{
+			testCaseID:       11,
+			subscribeSubject: "foo.>",
+			msgSubject:       "food.bar.baz",
+			expected:         false,
+		},
+		{
+			testCaseID:       12,
+			subscribeSubject: "foo.bar",
+			msgSubject:       "food.bar.baz",
+			expected:         false,
+		},
+		{
+			testCaseID:       13,
+			subscribeSubject: "foo.*.*.>",
+			msgSubject:       "foo.bar.bar",
+			expected:         false,
+		},
+		{
+			testCaseID:       14,
+			subscribeSubject: "foo.*.*.>",
+			msgSubject:       "foo.bar.bar.baz.12345",
+			expected:         true,
+		},
+		{
+			testCaseID:       15,
+			subscribeSubject: "foo.*.bar.*",
+			msgSubject:       "foo.buzz.bar.fizz",
+			expected:         true,
+		},
+		{
+			testCaseID:       16,
+			subscribeSubject: "foo.*.*.fizz.>",
+			msgSubject:       "foo.buzz.bar.fizz.12345",
+			expected:         true,
+		},
+		{
+			testCaseID:       17,
+			subscribeSubject: "foo.*.*.*",
+			msgSubject:       "foo.bar.baz.buzz.bizz",
+			expected:         false,
+		},
+	}
+
+	for _, td := range testData {
+		result := subjectMatches(td.subscribeSubject, td.msgSubject)
+		if result != td.expected {
+			t.Logf("TestCaseID: %d, Expected %t, got %t", td.testCaseID, td.expected, result)
+			t.Fail()
+		}
+	}
+}
+
 func Benchmark_HelloWorld_TenSubscriptions_OneMessagesPerSubscription(b *testing.B) {
 	// Setup
 	ps := NewPubSub()

@@ -3,6 +3,7 @@ package pubsub
 
 import (
 	"errors"
+	"strings"
 	"sync"
 )
 
@@ -75,7 +76,8 @@ func (ps *PubSub) Publish(subject string, data interface{}) {
 	msg := newMessage(subject, data)
 	ps.mu.RLock()
 	for _, s := range ps.subscriptions {
-		if s.subject == msg.subject {
+		// TODO: add matching function here
+		if subjectMatches(s.subject, msg.subject) {
 			s.mch <- msg
 		}
 	}
@@ -111,3 +113,44 @@ func newMessageHandlerWrapper(mh MsgHandler) MsgHandler {
 
 	return nmh
 }
+
+func subjectMatches(subscribeSubject, msgSubject string) bool {
+	if subscribeSubject == msgSubject {
+		return true
+	}
+
+	subjectTokens := strings.Split(subscribeSubject, ".")
+	msgSubjectTokens := strings.Split(msgSubject, ".")
+
+	subLen := len(subjectTokens)
+
+	if subLen > len(msgSubjectTokens) {
+		return false
+	}
+
+	for i, token := range msgSubjectTokens {
+		if (i+1 == subLen || i+1 > subLen) && subjectTokens[subLen-1] == ">" {
+			return true
+		}
+
+		if i+1 > subLen {
+			return false
+		}
+		subjectToken := subjectTokens[i]
+
+		if subjectToken == "*" {
+			continue
+		}
+
+		if token != subjectToken {
+			return false
+		}
+	}
+
+	return true
+}
+
+// TODO: Subject Validator
+// * allowed anywhere, by itself
+// > only allowed at end, by itself
+// alpha-numeric chars only
